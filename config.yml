@@ -1,0 +1,20 @@
+data:
+  input: "../data/evaluation/"
+
+resources:
+  annotations: f"{RESOURCE_DIR}/annotations"
+  ontology: "../resources/ontology/"
+  summaries: "../resources/documents/"
+  vectors: "../resources/vectors/"
+
+plots: "../plots"
+prompts: "../prompts/"
+vectorstore_name: "faiss_idx"
+
+ollama_url: "http://localhost:11434"
+
+models:
+  completion: "llama3.2"
+  embeddings: "mxbai-embed-large"
+
+# test:
