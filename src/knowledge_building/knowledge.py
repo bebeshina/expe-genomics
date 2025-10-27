@@ -1,7 +1,13 @@
+import collections
 import json
 import os
+import re
+
+import array as arr
+from typing import Sequence, List
 from venv import logger
 import networkx as nx
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import pydantic_core
@@ -73,8 +79,10 @@ def build_lexicalisations(d="../data/overall/") -> dict:
     return lexicalisation
 
 
-def build_pairs() -> dict:
+def build_pairs() -> set:
     rel_columns = {"disease_id": "hpo_id", "hpo_id": "gene_symbol", "database_id": "hpo_id", "maxo_id": "hpo_id"}
+    check = set()
+    # pairs = {str: List[str]}
     pairs = dict()
     d = f"{RESOURCE_DIR}/annotations/"
     for f in os.listdir(d):
@@ -82,20 +90,92 @@ def build_pairs() -> dict:
         for k, v in rel_columns.items():
             if k in frame.columns and v in frame.columns:
                 dic = dict(zip(frame[k].values.tolist(), frame[v].values.tolist()))
-                pairs.update(dic)
-    return pairs
+                check.update(["%s--%s" % (k, v) for k,v in dic.items()])
+                for key, val in dic.items():
+                    if key in pairs.keys():
+                        old = pairs.get(key)
+                        old.append(val)
+                        pairs[key] = old
+                    else:
+                        pairs[key] = [val]
+                # pairs.update(dic)
+    print("check", len(check))
+    return check
+    # return pairs
 
 
-def data_as_graph(pairs: dict) -> nx.Graph:
+def data_as_graph(pairs: set) -> nx.Graph:
     G = nx.Graph()
-    node_set = set(pairs.keys()).union(set(pairs.values()))
-    G.add_nodes_from(node_set)
+    nodes = set()
     edges = []
-    for k, v in pairs.items():
-        edges.append((k, v))
+    for e in pairs:
+        spl = e.split("--")
+        edges.append((spl[0], spl[1]))
+        nodes.add(spl[0])
+        nodes.add(spl[1])
+
+    G.add_nodes_from(nodes)
     G.add_edges_from(edges)
+    degrees = [G.degree(nodes)]
+
+    nd = []
+    for d in degrees.pop():
+        nd.append([d[0], d[1]])
+    temp = pd.DataFrame(nd, columns=["node", "degree"])
+    print(temp.describe())
+    # print(temp.quantile(0.5))
     # plot_connected_components(G)
+
     return G
+
+
+def is_hpo_node(node: str) -> bool:
+        """ Check if events starts with Exx """
+        return re.match("^HP", node) is not None
+
+
+def is_omim_node(node: str) -> bool:
+    """ Check if events starts with Exx """
+    return re.match("^OMIM", node) is not None
+
+
+def is_orpha_node(node: str) -> bool:
+    """ Check if events starts with Exx """
+    return re.match("^ORPHA", node) is not None
+
+
+def is_decipher_node(node: str) -> bool:
+    """ Check if events starts with Exx """
+    return re.match("^'DECIPHER", node) is not None
+
+
+def is_maxo_node(node: str) -> bool:
+    """ Check if events starts with Exx """
+    return re.match("^'MAXO", node) is not None
+
+
+def is_mondo_node(node: str) -> bool:
+    """ Check if events starts with Exx """
+    return re.match("^'MONDO", node) is not None
+
+
+def get_node_color(node: str) -> str:
+    """ Get color of the individual node """
+    if is_hpo_node(node):
+        return "#008000"
+    elif is_maxo_node(node):
+        return "#800080"
+    elif is_decipher_node(node):
+        return "#808080"
+    elif is_mondo_node(node):
+        return "#CD5C5C"
+    elif is_omim_node(node):
+        return "#46ECD5"
+    elif is_orpha_node(node):
+        return "#46ECD5"
+    else:
+        return "##90A1B9"
+
 
 
 def plot_connected_components(G: nx.Graph):
@@ -103,14 +183,21 @@ def plot_connected_components(G: nx.Graph):
     # Create a gridspec for adding subplots of different sizes
     axgrid = fig.add_gridspec(4, 4)
     ax0 = fig.add_subplot(axgrid[0:3, :])
+    # for component in nx.connected_components(G):
+    #     print(component, len(component))
+    #     nx.draw_shell(component, with_labels=True, font_weight='bold')
+    #     plt.show()
     #@todo fix warning sorted
+
     G_connected = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
+    cols = [get_node_color(node) for node in G_connected.nodes()]
+    #  node_color=cols
     pos = nx.spring_layout(G_connected, seed=10396953)
-    nx.draw_networkx_nodes(G_connected, pos, ax=ax0, node_size=20)
+    nx.draw_networkx_nodes(G_connected, pos, ax=ax0,  node_size=20)
     nx.draw_networkx_edges(G_connected, pos, ax=ax0, alpha=0.4)
-    ax0.set_title("Connected components of the Domain Graph")
+    # ax0.set_title("Connected components of the Annotations Graph")
     ax0.set_axis_off()
-    # plt.show()
+    plt.show()
 
 
 def get_prefix(term: str) -> str:
@@ -162,16 +249,18 @@ def build_structured_summaries(lexicalized_pairs: list) -> Summaries:
 
 def run():
     pairs = build_pairs()
+    print(len(pairs))
     graph = data_as_graph(pairs)
-    lexicalized_pairs = lexicalise_graph(graph)
-    print(len(lexicalized_pairs))
-    summaries = build_structured_summaries(lexicalized_pairs[3600:4469])
-    with open(f"{DATA_DIR}/summaries_11.json", "a+") as f:
-        # dump = summaries.model_dump()
-        dump = json.dumps(summaries.model_dump(), indent=4)
-        f.write(dump)
-        f.flush()
-        f.flush()
+    # plot_connected_components(graph)
+    # lexicalized_pairs = lexicalise_graph(graph)
+    # print(len(lexicalized_pairs))
+    # summaries = build_structured_summaries(lexicalized_pairs[3600:4469])
+    # with open(f"{DATA_DIR}/summaries_11.json", "a+") as f:
+    #     # dump = summaries.model_dump()
+    #     dump = json.dumps(summaries.model_dump(), indent=4)
+    #     f.write(dump)
+    #     f.flush()
+    #     f.flush()
 
 
 
@@ -198,3 +287,6 @@ def refactor():
         f.write(dump)
         f.flush()
         f.flush()
+
+
+run()
