@@ -110,22 +110,11 @@ def data_as_graph(pairs: set) -> nx.Graph:
     edges = []
     for e in pairs:
         spl = e.split("--")
-        edges.append((spl[0], spl[1]))
+        edges.append(((spl[0], {"color": get_node_color(spl[0])}), (spl[1], {"color": get_node_color(spl[1])})))
         nodes.add(spl[0])
         nodes.add(spl[1])
-
-    G.add_nodes_from(nodes)
+    G.add_nodes_from([(node, {"color": get_node_color(node)}) for node in nodes])
     G.add_edges_from(edges)
-    degrees = [G.degree(nodes)]
-
-    nd = []
-    for d in degrees.pop():
-        nd.append([d[0], d[1]])
-    temp = pd.DataFrame(nd, columns=["node", "degree"])
-    print(temp.describe())
-    # print(temp.quantile(0.5))
-    # plot_connected_components(G)
-
     return G
 
 
@@ -175,29 +164,6 @@ def get_node_color(node: str) -> str:
         return "#46ECD5"
     else:
         return "##90A1B9"
-
-
-
-def plot_connected_components(G: nx.Graph):
-    fig = plt.figure("", figsize=(10, 8))
-    # Create a gridspec for adding subplots of different sizes
-    axgrid = fig.add_gridspec(4, 4)
-    ax0 = fig.add_subplot(axgrid[0:3, :])
-    # for component in nx.connected_components(G):
-    #     print(component, len(component))
-    #     nx.draw_shell(component, with_labels=True, font_weight='bold')
-    #     plt.show()
-    #@todo fix warning sorted
-
-    G_connected = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
-    cols = [get_node_color(node) for node in G_connected.nodes()]
-    #  node_color=cols
-    pos = nx.spring_layout(G_connected, seed=10396953)
-    nx.draw_networkx_nodes(G_connected, pos, ax=ax0,  node_size=20)
-    nx.draw_networkx_edges(G_connected, pos, ax=ax0, alpha=0.4)
-    # ax0.set_title("Connected components of the Annotations Graph")
-    ax0.set_axis_off()
-    plt.show()
 
 
 def get_prefix(term: str) -> str:
