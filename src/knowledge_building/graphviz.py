@@ -63,18 +63,35 @@ def get_node_color(node: str) -> str:
         return "##90A1B9"
 
 
+def get_node_color_abbr(node: str) -> str:
+    """ Get color of the individual node """
+    if is_hpo_node(node):
+        return "b"
+    elif is_maxo_node(node):
+        return "g"
+    elif is_decipher_node(node):
+        return "r"
+    elif is_mondo_node(node):
+        return "c"
+    elif is_omim_node(node):
+        return "y"
+    elif is_orpha_node(node):
+        return "m"
+    else:
+        return "k"
+
 
 def plot_connected_components(G: nx.Graph):
     fig = plt.figure("", figsize=(10, 8))
     # Create a gridspec for adding subplots of different sizes
     axgrid = fig.add_gridspec(4, 4)
     ax0 = fig.add_subplot(axgrid[0:3, :])
-    G_connected = G.subgraph(nx.connected_components(G))
-    # G_connected = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
+    # G_connected = G.subgraph(nx.connected_components(G))
+    G_connected = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
     attributes = nx.get_node_attributes(G, "color")
     node_color_attrs = [str(attributes[node]) for node in G_connected.nodes()]
     pos = nx.spring_layout(G_connected, seed=10396953)
-    nx.draw_networkx(G_connected, pos, ax=ax0, node_color=node_color_attrs, node_size=20)
+    nx.draw_networkx(G_connected, pos, ax=ax0, node_color=node_color_attrs, node_size=30, with_labels=False)
     # nx.draw_networkx_nodes(G_connected, pos, ax=ax0,  node_size=20)
     # nx.draw_networkx_edges(G_connected, pos, ax=ax0, alpha=0.4)
     ax0.set_title("Connected components and their types")

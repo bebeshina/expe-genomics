@@ -2,20 +2,15 @@ import collections
 import json
 import os
 import re
-
-import array as arr
-from typing import Sequence, List
 from venv import logger
 import networkx as nx
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import pydantic_core
 from ollama import ChatResponse, chat, generate
 from pandas.errors import ParserError
 
 from definitions import DATA_DIR, RESOURCE_DIR
-from knowledge_building import schemas, kb_templates, completion
+from knowledge_building import schemas, kb_templates, completion, graphviz
 from knowledge_building.schemas import Summary, Summaries
 from resources import templates
 
@@ -108,62 +103,14 @@ def data_as_graph(pairs: set) -> nx.Graph:
     G = nx.Graph()
     nodes = set()
     edges = []
-    for e in pairs:
+    for e in list(pairs)[:3000]:
         spl = e.split("--")
-        edges.append(((spl[0], {"color": get_node_color(spl[0])}), (spl[1], {"color": get_node_color(spl[1])})))
+        edges.append((spl[0], spl[1]))
         nodes.add(spl[0])
         nodes.add(spl[1])
-    G.add_nodes_from([(node, {"color": get_node_color(node)}) for node in nodes])
+    G.add_nodes_from([(node, {"color": graphviz.get_node_color_abbr(node)}) for node in nodes])
     G.add_edges_from(edges)
     return G
-
-
-def is_hpo_node(node: str) -> bool:
-        """ Check if events starts with Exx """
-        return re.match("^HP", node) is not None
-
-
-def is_omim_node(node: str) -> bool:
-    """ Check if events starts with Exx """
-    return re.match("^OMIM", node) is not None
-
-
-def is_orpha_node(node: str) -> bool:
-    """ Check if events starts with Exx """
-    return re.match("^ORPHA", node) is not None
-
-
-def is_decipher_node(node: str) -> bool:
-    """ Check if events starts with Exx """
-    return re.match("^'DECIPHER", node) is not None
-
-
-def is_maxo_node(node: str) -> bool:
-    """ Check if events starts with Exx """
-    return re.match("^'MAXO", node) is not None
-
-
-def is_mondo_node(node: str) -> bool:
-    """ Check if events starts with Exx """
-    return re.match("^'MONDO", node) is not None
-
-
-def get_node_color(node: str) -> str:
-    """ Get color of the individual node """
-    if is_hpo_node(node):
-        return "#008000"
-    elif is_maxo_node(node):
-        return "#800080"
-    elif is_decipher_node(node):
-        return "#808080"
-    elif is_mondo_node(node):
-        return "#CD5C5C"
-    elif is_omim_node(node):
-        return "#46ECD5"
-    elif is_orpha_node(node):
-        return "#46ECD5"
-    else:
-        return "##90A1B9"
 
 
 def get_prefix(term: str) -> str:
@@ -217,7 +164,7 @@ def run():
     pairs = build_pairs()
     print(len(pairs))
     graph = data_as_graph(pairs)
-    # plot_connected_components(graph)
+    graphviz.plot_connected_components(graph)
     # lexicalized_pairs = lexicalise_graph(graph)
     # print(len(lexicalized_pairs))
     # summaries = build_structured_summaries(lexicalized_pairs[3600:4469])
